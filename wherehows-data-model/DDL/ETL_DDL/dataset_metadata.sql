@@ -55,6 +55,7 @@ CREATE TABLE `stg_dict_dataset` (
 -- dataset table
 CREATE TABLE `dict_dataset` (
   `id`                          INT(11) UNSIGNED NOT NULL                                                                   AUTO_INCREMENT,
+  `db_id`                       SMALLINT(6) UNSIGNED NOT NULL                                                               DEFAULT 0,
   `name`                        VARCHAR(200)                                                                                NOT NULL,
   `schema`                      MEDIUMTEXT CHARACTER SET utf8,
   `schema_type`                 VARCHAR(50)                                                                                 DEFAULT 'JSON'
@@ -87,7 +88,7 @@ CREATE TABLE `dict_dataset` (
   `modified_time`               INT UNSIGNED COMMENT 'latest wherehows modified',
   `wh_etl_exec_id`              BIGINT COMMENT 'wherehows etl execution id that modified this record',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_dataset_urn` (`urn`)
+  UNIQUE KEY `uq_dataset_db_id_urn` (`db_id`,`urn`)
 )
   ENGINE = InnoDB
   DEFAULT CHARSET = latin1;
@@ -354,3 +355,26 @@ AUTO_INCREMENT = 0
 CREATE INDEX server_cluster USING BTREE
 	ON stg_dict_dataset_instance(server_cluster, deployment_tier, data_center, slice);
 
+
+CREATE TABLE `log_dataset_instance_load_status` (
+  `dataset_id` int(11) NOT NULL DEFAULT '0',
+  `db_id` smallint(6) NOT NULL DEFAULT '0',
+  `dataset_type` varchar(30) NOT NULL COMMENT 'hive,teradata,oracle,hdfs...',
+  `dataset_native_name` varchar(200) NOT NULL,
+  `operation_type` varchar(50) DEFAULT NULL COMMENT 'load, merge, compact, update, delete',
+  `partition_grain` varchar(30) NOT NULL DEFAULT '' COMMENT 'snapshot, delta, daily, daily, monthly...',
+  `partition_expr` varchar(500) DEFAULT NULL COMMENT 'partition name or expression',
+  `data_time_expr` varchar(20) NOT NULL COMMENT 'datetime literal of the data datetime',
+  `data_time_epoch` int(11) NOT NULL COMMENT 'epoch second of the data datetime',
+  `record_count` bigint(20) DEFAULT NULL,
+  `size_in_byte` bigint(20) DEFAULT NULL,
+  `log_time_epoch` int(11) NOT NULL COMMENT 'When data is loaded or published',
+  `ref_dataset_type` varchar(30) DEFAULT NULL COMMENT 'Refer to the underlying dataset',
+  `ref_db_id` int(11) DEFAULT NULL COMMENT 'Refer to db of the underlying dataset',
+  `ref_uri` varchar(300) DEFAULT NULL COMMENT 'Table name or HDFS location',
+  `last_modified` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`dataset_id`,`db_id`,`partition_grain`,`data_time_epoch`),
+  KEY `dataset_native_name` (`dataset_native_name`,`partition_expr`),
+  KEY `ref_uri` (`ref_uri`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+ COMMENT='Capture the events of load/publish operation for dataset';

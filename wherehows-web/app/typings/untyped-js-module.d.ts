@@ -1,13 +1,38 @@
 declare module 'ember-modal-dialog/components/modal-dialog';
 
+declare module 'ember-radio-button/components/radio-button';
+
 declare module 'ember-simple-auth/mixins/authenticated-route-mixin' {
   import Mixin from '@ember/object/mixin';
   export default Mixin;
 }
 
+declare module 'ivy-tabs/components/ivy-tabs-tablist' {
+  import Component from '@ember/component';
+  export default class IvyTabsTablistComponent extends Component {
+    focusSelectedTab: () => void;
+    selectPreviousTab: () => void;
+    selectNextTab: () => void;
+  }
+}
+
 declare module 'ember-simple-auth/authenticators/base' {
   import EmberObject from '@ember/object';
   export default EmberObject;
+}
+
+/**
+ * Augments the Transition interface in the Ember namespace
+ */
+declare module 'ember' {
+  export namespace Ember {
+    // eslint-disable-next-line typescript/interface-name-prefix
+    interface Transition {
+      params: {
+        [key: string]: any;
+      };
+    }
+  }
 }
 
 declare module 'ember-simple-auth/services/session' {
@@ -24,14 +49,10 @@ declare module 'ember-simple-auth/services/session' {
   }
 }
 
-declare module 'wherehows-web/utils/datasets/compliance-policy';
-declare module 'wherehows-web/controllers/datasets/dataset' {
-  import Controller from '@ember/controller';
-  import { Tabs } from 'wherehows-web/constants/datasets/shared';
-
-  export default class extends Controller {
-    tabSelected: Tabs;
-  }
+declare module 'ember-inflector' {
+  const singularize: (arg: string) => string;
+  const pluralize: (arg: string) => string;
+  export { singularize, pluralize };
 }
 
 declare module 'ember-cli-mirage';
@@ -52,6 +73,7 @@ declare module 'scrollmonitor';
  * Merges global type defs for global modules on the window namespace.
  * These should be refactored into imported modules if available or shimmed as such
  */
+// eslint-disable-next-line typescript/interface-name-prefix
 interface Window {
   marked(param: string): { htmlSafe: () => string };
 
@@ -76,6 +98,7 @@ interface Window {
 /**
  * Merges the JSONView plugin into the jquery interface
  */
+// eslint-disable-next-line typescript/interface-name-prefix
 interface JQuery {
   JSONView(json: object): this;
   treegrid(): this;

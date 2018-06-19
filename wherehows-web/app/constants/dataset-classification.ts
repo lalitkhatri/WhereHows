@@ -1,5 +1,4 @@
-import { IFieldIdentifierOption } from 'wherehows-web/constants';
-
+import { IDropDownOption } from 'wherehows-web/typings/app/dataset-compliance';
 /**
  * List of string values for every dataset classifier
  * @enum {string}
@@ -25,7 +24,8 @@ enum DatasetClassifiers {
   PROFILE_VIEWS_BY_ME = 'Profile Views (by me)',
   ADVERTISING_DATA = 'Advertising related (LMS) Data',
   USAGE_ERROR_CONNECTIVITY_DATA = 'Usage, Error Reporting, Connectivity Data',
-  OTHER_CLICKSTREAM_BROWSING_DATA = 'Other Clickstream Data + Browsing history'
+  OTHER_CLICKSTREAM_BROWSING_DATA = 'Other Clickstream Data + Browsing history',
+  EMPLOYEE_DATA = 'Employee Data'
 }
 
 /**
@@ -37,9 +37,9 @@ type DatasetClassification = { [K in keyof typeof DatasetClassifiers]: boolean |
 /**
  * Describes the interface for a DatasetClassification option
  * @interface IDatasetClassificationOption
- * @extends {(IFieldIdentifierOption<boolean | void>)}
+ * @extends {(IDropDownOption<boolean | void>)}
  */
-interface IDatasetClassificationOption extends IFieldIdentifierOption<boolean | void> {
+interface IDatasetClassificationOption extends IDropDownOption<boolean | void> {
   classifier: keyof typeof DatasetClassifiers;
 }
 

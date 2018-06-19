@@ -9,7 +9,8 @@ enum PurgePolicy {
   ManualPurge = 'MANUAL_PURGE',
   AutoLimitedRetention = 'LIMITED_RETENTION',
   ManualLimitedRetention = 'MANUAL_LIMITED_RETENTION',
-  PurgeExempt = 'PURGE_EXEMPTED'
+  PurgeExempt = 'PURGE_EXEMPTED',
+  NotApplicable = 'PURGE_NOT_APPLICABLE'
 }
 
 /**
@@ -46,8 +47,12 @@ const purgePolicyProps: PurgePolicyProperties = {
     displayAs: 'Manual Limited Retention'
   },
   PURGE_EXEMPTED: {
-    desc: 'Choose this option only if the dataset is explicitly exempted from purging',
+    desc: 'Choose this option only if the dataset is explicitly exempted from purging.',
     displayAs: 'Purge Exempt'
+  },
+  PURGE_NOT_APPLICABLE: {
+    desc: 'Choose this option only if none of the purge policies are applicable.',
+    displayAs: 'Purge Not Applicable'
   }
 };
 
@@ -77,10 +82,4 @@ const exemptPolicy = PurgePolicy.PurgeExempt;
  */
 const isExempt = (policy: PurgePolicy) => policy === PurgePolicy.PurgeExempt;
 
-/**
- * User informational text for datasets without a purge policy
- * @type {string}
- */
-const missingPolicyText = 'This dataset does not have a current compliance purge policy.';
-
-export { PurgePolicy, purgePolicyProps, isExempt, exemptPolicy, missingPolicyText, getSupportedPurgePolicies };
+export { PurgePolicy, purgePolicyProps, isExempt, exemptPolicy, getSupportedPurgePolicies };

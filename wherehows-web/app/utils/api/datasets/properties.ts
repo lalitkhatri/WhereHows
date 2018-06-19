@@ -1,7 +1,7 @@
 import { warn } from '@ember/debug';
 import { ApiStatus } from 'wherehows-web/utils/api';
 import { getJSON, putJSON } from 'wherehows-web/utils/api/fetcher';
-import { datasetUrlById } from 'wherehows-web/utils/api/datasets/shared';
+import { datasetUrlById, datasetUrlByUrn } from 'wherehows-web/utils/api/datasets/shared';
 import {
   IDatasetProperties,
   IDatasetPropertiesGetResponse,
@@ -25,7 +25,12 @@ interface IPropertyItem {
  */
 const datasetPropertiesUrlById = (id: number) => `${datasetUrlById(id)}/properties`;
 
-const datasetDeprecationUrlById = (id: number) => `${datasetUrlById(id)}/deprecate`;
+/**
+ * Returns the url for a dataset deprecation endpoint by urn
+ * @param {string} urn
+ * @return {string}
+ */
+const datasetDeprecationUrlByUrn = (urn: string) => `${datasetUrlByUrn(urn)}/deprecate`;
 
 /**
  * Reads the response from the dataset properties endpoint and returns properties if found
@@ -136,7 +141,7 @@ const readNonPinotProperties = async (id: number): Promise<Array<IPropertyItem>>
 };
 
 /**
- * Describes the inteface of object returned from the api request to get pinot properties
+ * Describes the interface of object returned from the api request to get pinot properties
  * @interface IDatasetSamplesAndColumns
  */
 interface IDatasetSamplesAndColumns {
@@ -178,23 +183,26 @@ const readPinotProperties = async (id: number) => {
 };
 
 /**
- * Updates the properties on the dataset for deprecation
- * @param {number} id the id of the dataset
- * @param {boolean} deprecated flag indicating deprecation
- * @param {string} [deprecationNote=''] optional note accompanying deprecation change
+ * Persists the changes to a datasets deprecation properties by urn
+ * @param {string} urn
+ * @param {boolean} deprecated
+ * @param {string} deprecationNote
+ * @param {Date | null} decommissionTime
+ * @return {Promise<void>}
  */
-const updateDatasetDeprecation = async (id: number, deprecated: boolean, deprecationNote: string = '') => {
-  const { status, msg } = await putJSON<{ status: ApiStatus; msg: string }>({
-    url: datasetDeprecationUrlById(id),
+const updateDatasetDeprecationByUrn = (
+  urn: string,
+  deprecated: boolean,
+  deprecationNote: string = '',
+  decommissionTime: number | null
+): Promise<void> =>
+  putJSON<void>({
+    url: datasetDeprecationUrlByUrn(urn),
     data: {
       deprecated,
-      deprecationNote
+      deprecationNote,
+      decommissionTime
     }
   });
 
-  if (status !== ApiStatus.OK) {
-    throw new Error(msg);
-  }
-};
-
-export { readDatasetProperties, readNonPinotProperties, readPinotProperties, updateDatasetDeprecation };
+export { readDatasetProperties, readNonPinotProperties, readPinotProperties, updateDatasetDeprecationByUrn };

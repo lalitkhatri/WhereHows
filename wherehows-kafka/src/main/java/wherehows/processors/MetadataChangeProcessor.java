@@ -21,24 +21,20 @@ import com.linkedin.events.metadata.FailedMetadataChangeEvent;
 import com.linkedin.events.metadata.MetadataChangeEvent;
 import com.linkedin.events.metadata.Schemaless;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.IndexedRecord;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import wherehows.common.exceptions.UnauthorizedException;
 import wherehows.converters.KafkaLogCompactionConverter;
 import wherehows.dao.DaoFactory;
 import wherehows.dao.table.DatasetComplianceDao;
 import wherehows.dao.table.DatasetOwnerDao;
 import wherehows.dao.table.DictDatasetDao;
 import wherehows.dao.table.FieldDetailDao;
-import wherehows.exceptions.UnauthorizedException;
 import wherehows.models.table.DictDataset;
+import wherehows.utils.ProcessorUtil;
 
 import static wherehows.common.utils.StringUtil.*;
 
@@ -46,27 +42,26 @@ import static wherehows.common.utils.StringUtil.*;
 @Slf4j
 public class MetadataChangeProcessor extends KafkaMessageProcessor {
 
-  private final Config config = ConfigFactory.load();
+  private final DictDatasetDao _dictDatasetDao;
+  private final FieldDetailDao _fieldDetailDao;
+  private final DatasetOwnerDao _ownerDao;
+  private final DatasetComplianceDao _complianceDao;
 
-  private final String whitelistStr = config.hasPath("whitelist.mce") ? config.getString("whitelist.mce") : "";
-
-  private final Set<String> whitelistActors =
-      StringUtils.isBlank(whitelistStr) ? null : new HashSet<>(Arrays.asList(whitelistStr.split(";")));
-
-  private final DictDatasetDao _dictDatasetDao = DAO_FACTORY.getDictDatasetDao();
-
-  private final FieldDetailDao _fieldDetailDao = DAO_FACTORY.getDictFieldDetailDao();
-
-  private final DatasetOwnerDao _ownerDao = DAO_FACTORY.getDatasteOwnerDao();
-
-  private final DatasetComplianceDao _complianceDao = DAO_FACTORY.getDatasetComplianceDao();
+  private final Set<String> _whitelistActors;
 
   private final int MAX_DATASET_NAME_LENGTH = 400;
 
-  public MetadataChangeProcessor(DaoFactory daoFactory, String producerTopic,
+  public MetadataChangeProcessor(Config config, DaoFactory daoFactory, String producerTopic,
       KafkaProducer<String, IndexedRecord> producer) {
-    super(daoFactory, producerTopic, producer);
-    log.info("MCE whitelist: " + whitelistActors);
+    super(producerTopic, producer);
+
+    _dictDatasetDao = daoFactory.getDictDatasetDao();
+    _fieldDetailDao = daoFactory.getDictFieldDetailDao();
+    _ownerDao = daoFactory.getDatasteOwnerDao();
+    _complianceDao = daoFactory.getDatasetComplianceDao();
+
+    _whitelistActors = ProcessorUtil.getWhitelistedActors(config, "whitelist.mce");
+    log.info("MCE whitelist: " + _whitelistActors);
   }
 
   /**
@@ -86,14 +81,14 @@ public class MetadataChangeProcessor extends KafkaMessageProcessor {
     } catch (Exception exception) {
       log.error("MCE Processor Error:", exception);
       log.error("Message content: {}", event.toString());
-      this.PRODUCER.send(new ProducerRecord(_producerTopic, newFailedEvent(event, exception)));
+      sendMessage(newFailedEvent(event, exception));
     }
   }
 
-  private void processEvent(MetadataChangeEvent event) throws Exception {
+  public void processEvent(MetadataChangeEvent event) throws Exception {
     final ChangeAuditStamp changeAuditStamp = event.changeAuditStamp;
     String actorUrn = changeAuditStamp.actorUrn == null ? null : changeAuditStamp.actorUrn.toString();
-    if (whitelistActors != null && !whitelistActors.contains(actorUrn)) {
+    if (_whitelistActors != null && !_whitelistActors.contains(actorUrn)) {
       throw new UnauthorizedException("Actor " + actorUrn + " not in whitelist, skip processing");
     }
 
@@ -111,7 +106,7 @@ public class MetadataChangeProcessor extends KafkaMessageProcessor {
 
     // if DELETE, mark dataset as removed and return
     if (changeType == ChangeType.DELETE) {
-      _dictDatasetDao.setDatasetRemoved(identifier, true, changeAuditStamp);
+      _dictDatasetDao.setDatasetRemoved(identifier, true, event.deploymentInfo, changeAuditStamp);
       return;
     }
 
@@ -126,7 +121,7 @@ public class MetadataChangeProcessor extends KafkaMessageProcessor {
     if (dsSchema != null) { // if instanceof DatasetSchema
       _fieldDetailDao.insertUpdateDatasetFields(identifier, dataset, event.datasetProperty, changeAuditStamp, dsSchema);
     } else if (event.schema instanceof Schemaless) { // if instanceof Schemaless
-      _fieldDetailDao.insertUpdateSchemaless(identifier, dataset, changeAuditStamp);
+      _fieldDetailDao.insertUpdateSchemaless(identifier, changeAuditStamp);
     }
 
     // if owners are not null, insert or update owner
@@ -146,7 +141,7 @@ public class MetadataChangeProcessor extends KafkaMessageProcessor {
     }
   }
 
-  private FailedMetadataChangeEvent newFailedEvent(MetadataChangeEvent event, Throwable throwable) {
+  public FailedMetadataChangeEvent newFailedEvent(MetadataChangeEvent event, Throwable throwable) {
     FailedMetadataChangeEvent failedEvent = new FailedMetadataChangeEvent();
     failedEvent.time = System.currentTimeMillis();
     failedEvent.error = ExceptionUtils.getStackTrace(throwable);

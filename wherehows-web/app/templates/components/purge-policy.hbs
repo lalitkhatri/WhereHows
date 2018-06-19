@@ -1,22 +1,3 @@
-<section class="metadata-prompt">
-  <header class="metadata-prompt__header">
-    <p>
-      Compliance Purge Policy
-
-      <a
-        target="_blank"
-        href="http://go/gdpr/deletions/purgePolicies">
-        <sup>
-          More Info
-
-          <span class="glyphicon glyphicon-question-sign"
-                title="More information Purge Policies"></span>
-        </sup>
-      </a>
-    </p>
-  </header>
-</section>
-
 <ul class="purge-policy-list">
   {{#if isEditable}}
 
@@ -57,17 +38,16 @@
 
   {{else}}
 
-    {{#if purgePolicy}}
-      <li class="purge-policy-list__item">
+    <li class="purge-policy-list__item">
+      {{#if purgePolicy}}
         <strong>
           {{get (get purgePolicyProps purgePolicy) "displayAs"}}
         </strong>
-      </li>
-    {{else}}
+      {{else}}
 
-      <p>{{missingPolicyText}}</p>
-      <sub>To update, click edit and follow the steps</sub>
+        {{missingPolicyText}}
 
-    {{/if}}
+      {{/if}}
+    </li>
   {{/if}}
 </ul>

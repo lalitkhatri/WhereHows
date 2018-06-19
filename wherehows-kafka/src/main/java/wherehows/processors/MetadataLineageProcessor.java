@@ -13,51 +13,50 @@
  */
 package wherehows.processors;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.linkedin.events.metadata.ChangeAuditStamp;
+import com.linkedin.events.metadata.DatasetIdentifier;
 import com.linkedin.events.metadata.DatasetLineage;
-import com.linkedin.events.metadata.DeploymentDetail;
 import com.linkedin.events.metadata.FailedMetadataLineageEvent;
+import com.linkedin.events.metadata.JobStatus;
 import com.linkedin.events.metadata.MetadataLineageEvent;
 import com.linkedin.events.metadata.agent;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import wherehows.common.exceptions.SelfLineageException;
+import wherehows.common.exceptions.UnauthorizedException;
 import wherehows.dao.DaoFactory;
 import wherehows.dao.table.LineageDao;
-import wherehows.exceptions.UnauthorizedException;
+import wherehows.utils.ProcessorUtil;
+
+import static wherehows.utils.ProcessorUtil.*;
 
 
 @Slf4j
 public class MetadataLineageProcessor extends KafkaMessageProcessor {
 
-  private final Config config = ConfigFactory.load();
+  private final LineageDao _lineageDao;
 
-  private final String whitelistStr = config.hasPath("whitelist.mle") ? config.getString("whitelist.mle") : "";
+  private final Set<String> _whitelistActors;
 
-  private final Set<String> whitelistActors =
-      StringUtils.isBlank(whitelistStr) ? null : new HashSet<>(Arrays.asList(whitelistStr.split(";")));
-
-  private final LineageDao _lineageDao = DAO_FACTORY.getLineageDao();
-
-  public MetadataLineageProcessor(DaoFactory daoFactory, String producerTopic,
+  public MetadataLineageProcessor(Config config, DaoFactory daoFactory, String producerTopic,
       KafkaProducer<String, IndexedRecord> producer) {
-    super(daoFactory, producerTopic, producer);
-    log.info("MLE whitelist: " + whitelistActors);
+    super(producerTopic, producer);
+    this._lineageDao = daoFactory.getLineageDao();
+
+    _whitelistActors = ProcessorUtil.getWhitelistedActors(config, "whitelist.mle");
+    log.info("MLE whitelist: " + _whitelistActors);
   }
 
   /**
    * Process a MetadataLineageEvent record
    * @param indexedRecord IndexedRecord
-   * @throws Exception
    */
   public void process(IndexedRecord indexedRecord) {
     if (indexedRecord == null || indexedRecord.getClass() != MetadataLineageEvent.class) {
@@ -69,30 +68,39 @@ public class MetadataLineageProcessor extends KafkaMessageProcessor {
     MetadataLineageEvent event = (MetadataLineageEvent) indexedRecord;
     try {
       processEvent(event);
-    } catch (Exception exception) {
-      log.error("MLE Processor Error:", exception);
-      log.error("Message content: {}", event.toString());
-      this.PRODUCER.send(new ProducerRecord(_producerTopic, newFailedEvent(event, exception)));
+    } catch (Exception ex) {
+      if (ex instanceof SelfLineageException || ex.toString().contains("Response status 404")) {
+        log.warn(ex.toString());
+      } else {
+        log.error("MLE Processor Error:", ex);
+        log.error("Message content: {}", event.toString());
+      }
+      sendMessage(newFailedEvent(event, ex));
     }
   }
 
-  private void processEvent(MetadataLineageEvent event) throws Exception {
+  public void processEvent(MetadataLineageEvent event) throws Exception {
     if (event.lineage == null || event.lineage.size() == 0) {
       throw new IllegalArgumentException("No Lineage info in record");
     }
     log.debug("MLE: " + event.lineage.toString());
 
     String actorUrn = getActorUrn(event);
-
-    if (whitelistActors != null && !whitelistActors.contains(actorUrn)) {
+    if (_whitelistActors != null && !_whitelistActors.contains(actorUrn)) {
       throw new UnauthorizedException("Actor " + actorUrn + " not in whitelist, skip processing");
     }
 
+    if (event.jobExecution.status != JobStatus.SUCCEEDED) {
+      throw new UnsupportedOperationException("MLE only supports SUCCEEDED job status");
+    }
+
     List<DatasetLineage> lineages = event.lineage;
-    DeploymentDetail deployments = event.deploymentDetail;
+    for (DatasetLineage lineage : lineages) {
+      dedupeAndValidateLineage(lineage);
+    }
 
     // create lineage
-    _lineageDao.createLineages(actorUrn, lineages, deployments);
+    _lineageDao.createLineages(actorUrn, lineages, event.deploymentDetail);
   }
 
   /**
@@ -112,11 +120,24 @@ public class MetadataLineageProcessor extends KafkaMessageProcessor {
     return auditStamp.actorUrn.toString();
   }
 
-  private FailedMetadataLineageEvent newFailedEvent(MetadataLineageEvent event, Throwable throwable) {
+  public FailedMetadataLineageEvent newFailedEvent(MetadataLineageEvent event, Throwable throwable) {
     FailedMetadataLineageEvent failedEvent = new FailedMetadataLineageEvent();
     failedEvent.time = System.currentTimeMillis();
     failedEvent.error = ExceptionUtils.getStackTrace(throwable);
     failedEvent.metadataLineageEvent = event;
     return failedEvent;
+  }
+
+  @VisibleForTesting
+  void dedupeAndValidateLineage(DatasetLineage lineage) {
+    lineage.sourceDataset = dedupeDatasets(lineage.sourceDataset);
+    lineage.destinationDataset = dedupeDatasets(lineage.destinationDataset);
+
+    // check intersection of source and destination
+    List<DatasetIdentifier> intersection = new ArrayList<>(lineage.sourceDataset);
+    intersection.retainAll(lineage.destinationDataset);
+    if (intersection.size() > 0) {
+      throw new SelfLineageException("Source & destination datasets shouldn't overlap");
+    }
   }
 }

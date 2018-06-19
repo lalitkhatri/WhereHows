@@ -20,40 +20,84 @@
         <section class="action-bar">
           {{#if isEditing}}
 
-            {{#if _message}}
-              <div class="alert alert-{{_alertType}} post-action-notification action-footer-notification" role="alert">
-                {{_message}}
-              </div>
-            {{/if}}
-
             <div class="container action-bar__content">
               {{#if (has-next editStep editSteps)}}
-                <button
-                  class="nacho-button nacho-button--large-inverse action-bar__item"
-                  title="Next"
-                  {{action "nextStep"}}>
-                  Next
-                </button>
+
+                {{#if showAdvancedEditApplyStep}}
+
+                  {{#track-ui-event category=trackableCategory.Compliance action=trackableEvent.Compliance.ManualApply
+                                    name=editStep.name as |metrics|}}
+                  <button
+                    class="nacho-button nacho-button--large-inverse action-bar__item"
+                    title="Apply JSON"
+                    onclick={{action metrics.trackOnAction (action "onApplyComplianceJson")}}
+                    disabled={{isManualApplyDisabled}}>
+                    Apply
+                  </button>
+                  {{/track-ui-event}}
+
+                {{else}}
+
+                  {{#track-ui-event category=trackableCategory.Compliance action=trackableEvent.Compliance.Next
+                                    name=editStep.name as |metrics|}}
+                    <button
+                      class="nacho-button nacho-button--large-inverse action-bar__item"
+                      title="Next"
+                      onclick={{action metrics.trackOnAction (action "nextStep")}}
+                        disabled={{and (gt changeSetReviewCount 0) isInitialEditStep}}>
+                      Next
+                    </button>
+                  {{/track-ui-event}}
+
+                {{/if}}
+
               {{else}}
-                <button
-                  class="nacho-button nacho-button--large-inverse action-bar__item"
-                  title={{unless isDatasetFullyClassified
-                                 "Ensure you have provided a yes/no value for all dataset tags"
-                                 "Save"}}
-                    disabled={{isSavingDisabled}}
-                  {{action "saveCompliance"}}>
-                  Save
-                </button>
+
+                {{#track-ui-event category=trackableCategory.Compliance
+                                  action=trackableEvent.Compliance.Save as |metrics|}}
+                  <button
+                    class="nacho-button nacho-button--large-inverse action-bar__item"
+                    title="{{unless isDatasetFullyClassified
+                                    'Ensure you have provided a yes/no value for all dataset tags'
+                                    'Save'}}"
+                    onclick={{action "saveCompliance"}} disabled={{isSavingDisabled}}>
+                    Save
+                  </button>
+                {{/track-ui-event}}
+
               {{/if}}
 
               {{#if (has-previous editStep editSteps)}}
-                <button
-                  class="nacho-button--large nacho-button--secondary action-bar__item"
-                  title="Back"
-                  {{action "previousStep"}}>
-                  Back
-                </button>
+                {{#track-ui-event category=trackableCategory.Compliance
+                                  action=trackableEvent.Compliance.Previous
+                                  name=editStep.name as |metrics|}}
+                  <button
+                    class="nacho-button nacho-button--large nacho-button--secondary action-bar__item"
+                    title="Back"
+                    onclick={{action metrics.trackOnAction (action "previousStep")}}>
+                    Back
+                  </button>
+                {{/track-ui-event}}
 
+              {{/if}}
+
+              {{#track-ui-event category=trackableCategory.Compliance
+                                action=trackableEvent.Compliance.Cancel as |metrics|}}
+                <button
+                  class="nacho-button nacho-button--large nacho-button--secondary action-bar__item"
+                  onclick={{action metrics.trackOnAction (action "onCancel")}}>
+                  Cancel
+                </button>
+              {{/track-ui-event}}
+
+              {{#if (and isInitialEditStep (and manualParseError (not showGuidedComplianceEditMode)))}}
+                <div class="action-bar__content__error-messages">
+                  {{fa-icon "times-circle-o"}}
+
+                  <span class="dataset-compliance-fields__manual-entry-errors">
+                    {{manualParseError}}
+                  </span>
+                </div>
               {{/if}}
             </div>
 
@@ -62,44 +106,41 @@
       {{/if}}
 
       <div class="secondary-actions">
-        <div class="policy-last-saved">
-          Last saved:
-          <span class="policy-last-saved__saved">
-            {{if isNewComplianceInfo 'Never'
-                 (moment-from-now complianceInfo.modifiedTime)}}
-          </span>
-        </div>
-
         {{#unless isEditing}}
 
-          <button
-            {{action "nextStep"}}
-            class="nacho-button--large nacho-button--secondary secondary-actions__action">
-            Edit
-          </button>
-
-          {{#unless isNewComplianceInfo}}
+          {{#track-ui-event category=trackableCategory.Compliance
+                            action=trackableEvent.Compliance.Edit as |metrics|}}
             <button
-              {{action "onComplianceDownloadJson"}}
-              class="nacho-button nacho-button--large-inverse secondary-actions__action">
-              Download compliance metadata
+              class="nacho-button nacho-button--large secondary-actions__action"
+              onclick={{action metrics.trackOnAction (action "nextStep")}}>
+              Edit
             </button>
-          {{/unless}}
+          {{/track-ui-event}}
 
         {{/unless}}
+
+        <div class="policy-last-saved">
+          Last saved:
+          {{#if isNewComplianceInfo}}
+            <span class="policy-last-saved__saved">Never</span>
+          {{else}}
+            <span class="policy-last-saved__saved">
+              {{moment-from-now complianceInfo.modifiedTime}}
+            </span>
+            by
+            <span class="policy-last-saved__saved" title="{{complianceInfo.modifiedBy}}">
+              {{tooltip-on-element text=complianceInfo.modifiedBy}}
+              {{split-text complianceInfo.modifiedBy 30}}
+            </span>
+          {{/if}}
+        </div>
       </div>
 
       {{#if isEditing}}
         <div class="dataset-compliance-step-container">
-          {{partial "datasets/dataset-compliance/-dataset-compliance-step-indicator"}}
+          {{partial "datasets/dataset-compliance/dataset-compliance-step-indicator"}}
         </div>
       {{/if}}
-
-      {{#unless schemaless}}
-        {{#if (and (eq editStep.name editSteps.0.name) (not _hasBadData))}}
-          {{json-upload receiveJsonFile=(action "onComplianceJsonUpload") class="secondary-actions__action"}}
-        {{/if}}
-      {{/unless}}
 
       {{#if (or isReadOnly (eq editStep.name editSteps.2.name))}}
         {{partial "datasets/dataset-compliance/dataset-classification"}}
@@ -128,10 +169,36 @@
         {{/if}}
 
         {{#if getPlatformPoliciesTask.last.isSuccessful}}
+          <section class="metadata-prompt">
+            <header class="metadata-prompt__header">
+              <p>
+                Compliance Purge Policy
+
+                {{more-info
+                  link="http://go/gdpr/deletions/purgePolicies"
+                  tooltip="Click for more information Purge Policies"
+                }}
+              </p>
+
+              {{#unless isEditing}}
+                <div class="compliance-entities-meta__secondary">
+                  <button
+                    class="nacho-button nacho-button--tertiary"
+                    onclick={{action "nextStep"}}>
+
+                    <i class="fa fa-pencil" aria-label="Edit Compliance Policy"></i>
+
+                    Edit
+                  </button>
+                </div>
+              {{/unless}}
+            </header>
+          </section>
 
           {{purge-policy
             isEditable=(not isReadOnly)
             platform=platform
+            missingPolicyText="This dataset does not have a current compliance purge policy."
             supportedPurgePolicies=supportedPurgePolicies
             purgeNote=complianceInfo.compliancePurgeNote
             purgePolicy=(readonly complianceInfo.complianceType)
@@ -143,7 +210,7 @@
 
       {{#if schemaless}}
 
-        {{#if (or isReadOnly (eq editStep.name editSteps.0.name))}}
+        {{#if (or isReadOnly isInitialEditStep)}}
           {{datasets/schemaless-tagging
             isEditable=(not isReadOnly)
             classification=(readonly complianceInfo.confidentiality)
@@ -155,7 +222,7 @@
 
       {{else}}
 
-        {{#if (or isReadOnly (eq editStep.name editSteps.0.name))}}
+        {{#if (or isReadOnly isInitialEditStep)}}
           {{partial "datasets/dataset-compliance/dataset-compliance-entities"}}
         {{/if}}
 
@@ -171,5 +238,3 @@
 
   {{/if}}
 {{/if}}
-
-{{yield}}

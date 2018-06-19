@@ -24,16 +24,19 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import javax.naming.AuthenticationException;
+import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
 import org.apache.commons.lang3.StringUtils;
-import org.hibernate.hikaricp.internal.HikariCPConnectionProvider;
-import play.Logger;
-import play.Play;
 import play.data.DynamicForm;
 import play.libs.Json;
+import play.Logger;
+import play.Play;
 import play.mvc.BodyParser;
 import play.mvc.Controller;
+import play.mvc.Http.Request;
 import play.mvc.Result;
+import play.mvc.Results;
 import play.mvc.Security;
 import security.AuthenticationManager;
 import utils.Tree;
@@ -52,6 +55,35 @@ public class Application extends Controller {
   private static final String PIWIK_SITE_ID = Play.application().configuration().getString("tracking.piwik.siteid");
   private static final String PIWIK_URL = Play.application().configuration().getString("tracking.piwik.url");
   private static final Boolean IS_INTERNAL = Play.application().configuration().getBoolean("linkedin.internal", false);
+  private static final String JIT_ACL_WHITELIST =
+      Play.application().configuration().getString("linkedin.jit.acl.whitelist", "");
+  private static final String WHZ_DS_OWNERSHIP_TAB =
+      Play.application().configuration().getString("ui.show.ownership.revamp", "hide");
+  private static final Boolean WHZ_STG_BANNER =
+      Play.application().configuration().getBoolean("ui.show.staging.banner", false);
+  private static final Boolean WHZ_STALE_SEARCH_ALERT =
+      Play.application().configuration().getBoolean("ui.show.stale.search", false);
+  private static final Boolean HTTPS_REDIRECT = Play.application().configuration().getBoolean("https.redirect", false);
+
+  private static final String WHZ_WIKI_LINKS__GDRP_PII =
+      Play.application().configuration().getString("linkedin.links.wiki.gdprPii", "");
+  private static final String WHZ_WIKI_LINKS__TMS_SCHEMA =
+      Play.application().configuration().getString("linkedin.links.wiki.tmsSchema", "");
+  private static final String WHZ_WIKI_LINKS__GDPR_TAXONOMY =
+      Play.application().configuration().getString("linkedin.links.wiki.gdprTaxonomy", "");
+  private static final String WHZ_WIKI_LINKS__STALE_SEARCH_INDEX =
+      Play.application().configuration().getString("linkedin.links.wiki.staleSearchIndex", "");
+  private static final String WHZ_WIKI_LINKS__DHT =
+      Play.application().configuration().getString("linkedin.links.wiki.dht", "");
+  private static final String WHZ_WIKI_LINKS__PURGE_POLICIES =
+      Play.application().configuration().getString("linkedin.links.wiki.purgePolicies", "");
+  private static final String WHZ_WIKI_LINKS__JIT_ACL_FAQ =
+      Play.application().configuration().getString("linkedin.links.wiki.jitAcl", "");
+  private static final String WHZ_WIKI_LINKS__METADATA_CUSTOM_REGEX =
+      Play.application().configuration().getString("linkedin.links.wiki.metadataCustomRegex", "");
+  private static final String WHZ_WIKI_LINKS__COMPLIANCE_OWNER =
+      Play.application().configuration().getString("linkedin.links.wiki.complianceOwner", "");
+
   private static final String DB_WHEREHOWS_URL =
       Play.application().configuration().getString("database.opensource.url");
   private static final String WHZ_DB_DSCLASSNAME =
@@ -65,7 +97,6 @@ public class Application extends Controller {
       Play.application().configuration().getString("dao.factory.class", DaoFactory.class.getCanonicalName());
 
   private static final EntityManagerFactory ENTITY_MANAGER_FACTORY = ConnectionPoolProperties.builder()
-      .providerClass(HikariCPConnectionProvider.class.getName())
       .dataSourceClassName(WHZ_DB_DSCLASSNAME)
       .dataSourceURL(DB_WHEREHOWS_URL)
       .dataSourceUser(DB_WHEREHOWS_USERNAME)
@@ -95,6 +126,11 @@ public class Application extends Controller {
    * @return {Result} build output index.html resource
    */
   private static Result serveAsset(String path) {
+    Result redirect = redirectToHttpsIfNeeded();
+    if (redirect != null) {
+      return redirect;
+    }
+
     InputStream indexHtml = Play.application().classloader().getResourceAsStream("public/index.html");
     response().setHeader("Cache-Control", "no-cache");
 
@@ -141,6 +177,11 @@ public class Application extends Controller {
    * @return {Result} response from serveAsset method
    */
   public static Result index(String path) {
+    Result redirect = redirectToHttpsIfNeeded();
+    if (redirect != null) {
+      return redirect;
+    }
+
     return serveAsset("");
   }
 
@@ -155,11 +196,50 @@ public class Application extends Controller {
 
     config.put("appVersion", APP_VERSION);
     config.put("isInternal", IS_INTERNAL);
+    config.set("wikiLinks", wikiLinks());
+    // Ownership tab is currently in a UX revamp, this flag will determine whether to show it or not
+    // under certain environments
+    config.put("showOwnership", WHZ_DS_OWNERSHIP_TAB);
+    config.set("JitAclAccessWhitelist", Json.toJson(StringUtils.split(JIT_ACL_WHITELIST, ',')));
     config.set("tracking", trackingInfo());
+    // In a staging environment, we can trigger this flag to be true so that the UI can handle based on
+    // such config and alert users that their changes will not affect production data
+    config.put("isStagingBanner", WHZ_STG_BANNER);
+    // Flag set in order to warn users that search is experiencing issues
+    config.put("isStaleSearch", WHZ_STALE_SEARCH_ALERT);
     response.put("status", "ok");
     response.set("config", config);
 
     return ok(response);
+  }
+
+  /**
+   * @return Json object with internal wiki links
+   */
+  private static ObjectNode wikiLinks() {
+    ObjectNode wikiLinks = Json.newObject();
+
+    wikiLinks.put("gdprPii", WHZ_WIKI_LINKS__GDRP_PII);
+    wikiLinks.put("tmsSchema", WHZ_WIKI_LINKS__TMS_SCHEMA);
+    wikiLinks.put("gdprTaxonomy", WHZ_WIKI_LINKS__GDPR_TAXONOMY);
+    wikiLinks.put("staleSearchIndex", WHZ_WIKI_LINKS__STALE_SEARCH_INDEX);
+    wikiLinks.put("dht", WHZ_WIKI_LINKS__DHT);
+    wikiLinks.put("purgePolicies", WHZ_WIKI_LINKS__PURGE_POLICIES);
+    wikiLinks.put("jitAcl", WHZ_WIKI_LINKS__JIT_ACL_FAQ);
+    wikiLinks.put("metadataCustomRegex", WHZ_WIKI_LINKS__METADATA_CUSTOM_REGEX);
+
+    return wikiLinks;
+  }
+
+  private static Result redirectToHttpsIfNeeded() {
+    Request request = request();
+    if (!HTTPS_REDIRECT || request.secure()) {
+      return null;
+    }
+
+    String url = "https://" + request.host() + request.uri();
+    Logger.info("Redirecting to " + url);
+    return redirect(url);
   }
 
   /**
@@ -274,7 +354,7 @@ public class Application extends Controller {
   }
 
   @BodyParser.Of(BodyParser.Json.class)
-  public static Result authenticate() {
+  public static Result authenticate() throws NamingException {
     JsonNode json = request().body().asJson();
     // Extract username and password as String from JsonNode,
     //   null if they are not strings
@@ -300,8 +380,9 @@ public class Application extends Controller {
 
     try {
       AuthenticationManager.authenticateUser(username, password);
-    } catch (Exception e) {
-      return badRequest("Invalid credentials");
+    } catch (AuthenticationException e) {
+      Logger.warn("Authentication error!", e);
+      return badRequest("Invalid Credential");
     }
 
     // Adds the username to the session cookie

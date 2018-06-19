@@ -1,10 +1,13 @@
 <div class="row">
   <div class="col-md-3 wh-sidebar">
     {{#search/filter-rail header=header as |rail|}}
-      {{rail.radioGroup
-        radioOptions=sources
-        title="Source"
-        changed=(action "sourceDidChange")}}
+
+      {{#search/containers/search-sources currentSource=source as |searchSource|}}
+        {{rail.radioGroup
+          radioOptions=searchSource.radioSources
+          title="Source"
+          changed=(action "sourceDidChange")}}
+      {{/search/containers/search-sources}}
 
     {{!--Api for date range not currently available--}}
     {{!--rail.dateRange
@@ -74,26 +77,26 @@
                     {{#if model.isMetrics}}
                       <i class="fa fa-plus-square-o"></i>
                       {{#link-to 'metrics.metric' dataset.id}}
-                        {{{dataset.name}}}
+                        {{dataset.name}}
                       {{/link-to}}
                     {{else}}
                       <i class="fa fa-database"></i>
-                      {{#link-to 'datasets.dataset' dataset.id}}
-                        {{{dataset.name}}}
+                      {{#link-to 'datasets.dataset' dataset.urn}}
+                        {{dataset.name}}
                       {{/link-to}}
                     {{/if}}
                   </div>
                   <p>
-                    {{{ dataset.urn }}}
+                    {{ dataset.urn }}
                   </p>
                   {{#if dataset.source}}
-                    <p>source: {{{ dataset.source }}}</p>
+                    <p>source: {{ dataset.source }}</p>
                   {{else}}
                     <p>source: Metric</p>
                   {{/if}}
                   <div class="schematext"
                        style="margin-top:5px;margin-bottom: 10px;">
-                    {{{ dataset.schema }}}
+                    {{ dataset.schema }}
                   </div>
                 </td>
               </tr>

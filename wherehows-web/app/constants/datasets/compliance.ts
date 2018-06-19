@@ -3,7 +3,7 @@
  */
 enum SuggestionIntent {
   accept = 'accept',
-  ignore = 'ignore'
+  ignore = 'reject'
 }
 
 /**
@@ -22,10 +22,20 @@ enum Classification {
  * @enum {string}
  */
 enum IdLogicalType {
+  // Numerical format, 12345
   Numeric = 'NUMERIC',
+  // URN format, urn:li:member:12345
   Urn = 'URN',
+  // Reversed URN format, 12345:member:li:urn
   ReversedUrn = 'REVERSED_URN',
-  CompositeUrn = 'COMPOSITE_URN'
+  // [Deprecated] Use CUSTOM format + pattern instead
+  CompositeUrn = 'COMPOSITE_URN',
+  // Any other non-standard format. A pattern for the value is expected to be provided
+  Custom = 'CUSTOM',
+  // Data is stored in reversible encoded/serialized/encrypted format
+  Encoded = 'ENCODED',
+  // Data is stored in irreversible hashed format
+  Hashed = 'HASHED'
 }
 
 /**

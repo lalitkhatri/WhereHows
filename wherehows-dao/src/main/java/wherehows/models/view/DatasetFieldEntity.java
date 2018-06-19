@@ -27,7 +27,13 @@ public class DatasetFieldEntity {
 
   private String logicalType;
 
+  private String valuePattern;
+
   private Boolean nonOwner;
 
   private String securityClassification;
+
+  private Boolean pii;
+
+  private Boolean readonly;
 }

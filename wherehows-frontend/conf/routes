@@ -266,25 +266,63 @@ GET           /api/v1/jira/tickets/:managerId                                   
 
 POST          /api/v1/tracking                                                  controllers.api.v1.Tracking.addTrackingEvent()
 
-GET           /api/v2/platforms/:platform/:prefix                               controllers.api.v2.Dataset.listSegments(platform: String, prefix: String)
+GET           /api/v2/list/platforms                                            controllers.api.v2.Dataset.getDataPlatforms
+
+GET           /api/v2/list/compliance-data-types                                controllers.api.v2.Dataset.getComplianceDataTypes
+
+GET           /api/v2/platforms/:platform/prefix/:prefix                        controllers.api.v2.Dataset.listSegments(platform: String, prefix: String)
 
 GET           /api/v2/platforms/:platform                                       controllers.api.v2.Dataset.listSegments(platform: String, prefix = "")
 
 GET           /api/v2/platforms                                                 controllers.api.v2.Dataset.listSegments(platform = null, prefix = "")
 
-GET           /api/v2/datasets/platform/:platform/:prefix                       controllers.api.v2.Dataset.listDatasets(platform: String, prefix: String)
+GET           /api/v2/datasets/platform/:platform/prefix/:prefix                controllers.api.v2.Dataset.listDatasets(platform: String, prefix: String)
 
 GET           /api/v2/datasets/platform/:platform                               controllers.api.v2.Dataset.listDatasets(platform: String, prefix = "")
 
-GET           /api/v2/datasets/count/platform/:platform/:prefix                 controllers.api.v2.Dataset.countDatasets(platform: String, prefix: String)
+GET           /api/v2/datasets                                                  controllers.api.v2.Dataset.listDatasets(platform = null, prefix = "")
+
+GET           /api/v2/datasets/count/platform/:platform/prefix/:prefix          controllers.api.v2.Dataset.countDatasets(platform: String, prefix: String)
 
 GET           /api/v2/datasets/count/platform/:platform                         controllers.api.v2.Dataset.countDatasets(platform: String, prefix = "")
 
 GET           /api/v2/datasets/count                                            controllers.api.v2.Dataset.countDatasets(platform = null, prefix = "")
 
-GET           /api/v2/list/platforms                                            controllers.api.v2.Dataset.getDataPlatforms
+HEAD          /api/v2/datasets/idtourn/:id                                      controllers.api.v2.Dataset.getWhUrnById(id: Int)
 
-GET           /api/v2/list/complianceDataTypes                                  controllers.api.v2.Dataset.getComplianceDataTypes
+GET           /api/v2/datasets/:urn                                             controllers.api.v2.Dataset.getDataset(urn: String)
+
+PUT           /api/v2/datasets/:urn/deprecate                                   controllers.api.v2.Dataset.updateDatasetDeprecation(urn: String)
+
+GET           /api/v2/datasets/:urn/schema                                      controllers.api.v2.Dataset.getDatasetSchema(urn: String)
+
+GET           /api/v2/datasets/:urn/owners                                      controllers.api.v2.Dataset.getDatasetOwners(urn: String)
+
+POST          /api/v2/datasets/:urn/owners                                      controllers.api.v2.Dataset.updateDatasetOwners(urn: String)
+
+GET           /api/v2/datasets/:urn/owners/suggestion                           controllers.api.v2.Dataset.getDatasetSuggestedOwners(urn: String)
+
+GET           /api/v2/datasets/:urn/compliance                                  controllers.api.v2.Dataset.getDatasetCompliance(urn: String)
+
+POST          /api/v2/datasets/:urn/compliance                                  controllers.api.v2.Dataset.updateDatasetCompliance(urn: String)
+
+GET           /api/v2/datasets/:urn/retention                                   controllers.api.v2.Dataset.getDatasetRetention(urn: String)
+
+POST          /api/v2/datasets/:urn/retention                                   controllers.api.v2.Dataset.updateDatasetRetention(urn: String)
+
+GET           /api/v2/datasets/:urn/compliance/suggestion                       controllers.api.v2.Dataset.getDatasetSuggestedCompliance(urn: String)
+
+POST          /api/v2/datasets/:urn/compliance/suggestion/feedback              controllers.api.v2.Dataset.sendDatasetSuggestedComplianceFeedback(urn: String)
+
+GET           /api/v2/datasets/:urn/acl                                         controllers.api.v2.Dataset.getDatasetAcls(urn: String)
+
+PUT           /api/v2/datasets/:urn/acl/add                                     controllers.api.v2.Dataset.addUserToDatasetAcl(urn: String)
+
+DELETE        /api/v2/datasets/:urn/acl/remove                                  controllers.api.v2.Dataset.removeUserFromDatasetAcl(urn: String)
+
+GET           /api/v2/datasets/:urn/upstreams                                   controllers.api.v2.Dataset.getDatasetUpstreams(urn: String)
+
+GET           /api/v2/datasets/:urn/downstreams                                 controllers.api.v2.Dataset.getDatasetDownstreams(urn: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)

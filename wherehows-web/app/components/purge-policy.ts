@@ -7,7 +7,6 @@ import {
   DatasetPlatform,
   exemptPolicy,
   isExempt,
-  missingPolicyText,
   PurgePolicy,
   purgePolicyProps
 } from 'wherehows-web/constants';
@@ -24,7 +23,7 @@ export default class PurgePolicyComponent extends Component {
    * Reference to the informational text if the dataset does not have a saved purge policy
    * @type {string}
    */
-  missingPolicyText = missingPolicyText;
+  missingPolicyText: string;
 
   /**
    * Reference to client options for each purge policy
@@ -57,7 +56,7 @@ export default class PurgePolicyComponent extends Component {
    * Flag indication that policy has a request exemption reason
    * @type {boolean}
    */
-  requestExemptionReason = false;
+  requestExemptionReason: boolean;
 
   /**
    * An options hash for the purge exempt reason text editor
@@ -79,7 +78,13 @@ export default class PurgePolicyComponent extends Component {
    */
   onPolicyChange: (purgePolicy: PurgePolicy) => IComplianceInfo['complianceType'] | null;
 
-  didReceiveAttrs(this: PurgePolicyComponent) {
+  constructor() {
+    super(...arguments);
+
+    this.requestExemptionReason || (this.requestExemptionReason = false);
+  }
+
+  didReceiveAttrs() {
     this._super(...arguments);
     this.checkExemption(get(this, 'purgePolicy'));
   }
@@ -104,7 +109,8 @@ export default class PurgePolicyComponent extends Component {
    * Applies cursor / document focus to the purge note text editor
    */
   focusEditor(this: PurgePolicyComponent) {
-    const exemptionReasonElement = <HTMLElement>get(this, 'element').querySelector('.comment-new__content');
+    const element = get(this, 'element');
+    const exemptionReasonElement: HTMLElement | null = element && element.querySelector('.comment-new__content');
 
     if (exemptionReasonElement) {
       exemptionReasonElement.focus();
@@ -114,10 +120,9 @@ export default class PurgePolicyComponent extends Component {
   actions = {
     /**
      * Handles the change to the currently selected purge policy
-     * @param {string} _name unused name for the radio group
      * @param {PurgePolicy} purgePolicy the selected purge policy
      */
-    onChange(this: PurgePolicyComponent, _name: string, purgePolicy: PurgePolicy) {
+    onChange(this: PurgePolicyComponent, purgePolicy: PurgePolicy) {
       return get(this, 'onPolicyChange')(purgePolicy);
     }
   };

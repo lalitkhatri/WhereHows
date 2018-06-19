@@ -1,7 +1,8 @@
-@import "../abstracts/functions";
-@import "../abstracts/mixins";
+@import '../abstracts/functions';
+@import '../abstracts/mixins';
 
 $item-spacing: 10px;
+$navbar-transition-speed: $banner-animation-speed;
 
 /**
  * Override Bootstrap navigation class, .navbar, ruleset
@@ -11,6 +12,7 @@ $item-spacing: 10px;
    * Explicitly sets the .navbar min-height to a shared value
    */
   min-height: $nav-min-height;
+  transition: top $navbar-transition-speed ease;
 
   &-inverse {
     /**
@@ -31,6 +33,11 @@ $item-spacing: 10px;
         }
       }
     }
+  }
+  /// Offset is meant to accomodate for the animation that slides everything in the app-view down for the
+  /// sake of the banner alerts
+  &.navbar-top-offset {
+    top: $banner-alerts-height;
   }
 }
 
@@ -61,7 +68,7 @@ $item-spacing: 10px;
  */
 .secondary-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
 
   &__action + &__action {
@@ -86,6 +93,14 @@ $item-spacing: 10px;
   &__content {
     white-space: nowrap;
     vertical-align: top;
+
+    &__error-messages {
+      display: inline-flex;
+      align-items: center;
+      color: get-color(red5);
+      margin-left: item-spacing(2);
+      padding-right: item-spacing(2);
+    }
   }
 
   &__item + &__item {

@@ -3,7 +3,7 @@
 {{#if isShowingFieldComment}}
   {{#if getComments.last.isRunning}}
     {{#modal-dialog
-      overlayClass="notification-confirm-modal-overlay"
+      overlayClass="notification-overlay"
       containerClassNames=containerClassNames
       onClose=(action "hideComments")
     }}
@@ -26,7 +26,7 @@
 
         {{#each stream.comments as |comment|}}
           {{#stream.item comment=comment}}
-            {{{comment.html}}}
+            {{comment.html}}
           {{/stream.item}}
         {{/each}}
 

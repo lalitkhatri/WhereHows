@@ -1,4 +1,4 @@
-<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+<nav class="navbar navbar-inverse navbar-fixed-top {{if banners.isShowingBanners "navbar-top-offset"}}" role="navigation">
   <div class="container">
     <div class="navbar-header">
       <button class="navbar-toggle collapsed" aria-expanded="false" aria-controls="navbar">
@@ -34,7 +34,6 @@
           <ul class="dropdown-menu" role="menu">
             {{#nav-link 'scripts' tagName="li"}}Script Finder{{/nav-link}}
             {{#nav-link 'schemahistory' tagName="li"}}Schema History{{/nav-link}}
-            {{#nav-link 'idpc' tagName="li"}}IDPC{{/nav-link}}
           </ul>
         </li>
 

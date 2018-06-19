@@ -27,7 +27,14 @@ export interface IComplianceEntity {
   // User specified / default security classification for the related schema field
   securityClassification: Classification | null;
   // Flag indicating that the dataset is of a subject type, default is false
-  nonOwner: boolean;
+  nonOwner: boolean | null;
+  // Flag indicating that this compliance field is not editable by the end user
+  // field should also be filtered from persisted policy
+  readonly readonly?: boolean;
+  // Optional attribute for the value of a CUSTOM regex. Required for CUSTOM field format
+  valuePattern?: string | null;
+  // Flags this entity as containing pii data
+  pii?: boolean;
 }
 
 /**
@@ -42,22 +49,24 @@ export interface IComplianceInfo {
   // User entered purge notation for a dataset with a purge exempt policy
   compliancePurgeNote: null | string;
   // Purge Policy for the dataset
-  complianceType: PurgePolicy;
+  complianceType: PurgePolicy | '';
   // Dataset level security classification
   confidentiality: Classification | null;
   // Flag indicating that the dataset contains pii data, typically for schemaless dataset this is user entered,
   // for datasets with a schema, this derived from the complianceEntities
   containingPersonalData?: boolean;
   // Tags for a types of data contained in the related dataset
-  datasetClassification: DatasetClassification;
+  datasetClassification: DatasetClassification | null;
   // Unique wherehows specific database identifier
-  datasetId: number;
+  datasetId: null;
   // Unique urn for the dataset
-  datasetUrn?: string;
+  readonly datasetUrn?: string;
   // optional string with username of modifier
   modifiedBy?: string;
   // optional timestamp of last modification date
   modifiedTime?: string;
+  // optional attribute indicating that the compliance policy is derived from a parent in the lineage
+  readonly fromUpstream?: boolean;
 }
 
 /**
@@ -66,7 +75,6 @@ export interface IComplianceInfo {
  * @interface IComplianceGetResponse
  */
 export interface IComplianceGetResponse {
-  status: ApiStatus;
   complianceInfo?: IComplianceInfo;
   msg?: string;
 }
@@ -93,6 +101,8 @@ export interface IComplianceSuggestion {
  * @interface ISuggestedFieldClassification
  */
 export interface ISuggestedFieldClassification {
+  // uuid for the field suggestion
+  uid?: string;
   confidenceLevel: number;
   suggestion: {
     identifierType: IComplianceEntity['identifierType'];

@@ -22,6 +22,7 @@ import javax.persistence.EntityManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import wherehows.models.view.DatasetOwner;
+import wherehows.models.view.DatasetOwnership;
 
 
 public class OwnerViewDao extends BaseViewDao {
@@ -53,5 +54,15 @@ public class OwnerViewDao extends BaseViewDao {
       owner.setModifiedTime(owner.getModifiedTime() * 1000);
     }
     return owners;
+  }
+
+  @Nonnull
+  public DatasetOwnership getDatasetOwners(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  @Nonnull
+  public DatasetOwnership getDatasetSuggestedOwners(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 }

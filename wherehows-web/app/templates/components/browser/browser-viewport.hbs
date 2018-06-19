@@ -61,42 +61,65 @@
     {{/table.body}}
   {{/dataset-table}}
 {{else}}
-  {{#dataset-table
-    fields=entities as |table|}}
-    {{#table.body as |body|}}
-      {{#each
-        table.data as |entity|}}
-        {{#body.row as |row|}}
-          {{#row.cell}}
-            {{#link-to entityRoute entity.id}}
-              <span class="entity-list__title">
-                {{entity.name}}
-              </span>
-            {{/link-to}}
-            <br>
-            {{#if (eq currentEntity 'metrics')}}
-              {{entity.group}} - {{entity.dashboardName}}
-              <br>
-              {{entity.description}}
-            {{/if}}
 
-            {{#if (eq currentEntity 'datasets')}}
-              {{dataset-owner-list owners=entity.owners datasetName=entity.name}}
-            {{/if}}
+  {{#infinite-scroller
+    use-document=true
+    class="browse-entities"
+    on-load-more=(action 'loadMoreEntities') as |scroller|
+  }}
 
-            {{#if entity.formatedModified}}
-              <span>Last Modified:</span>
+    {{#each entities as |entity|}}
 
-              <span title="{{entity.formatedModified}}">
-                {{moment-from-now entity.formatedModified }}
-              </span>
-            {{/if}}
-          {{/row.cell}}
-          {{#row.cell}}
-            {{datasets/dataset-actions actionItems=actionItems}}
-          {{/row.cell}}
-        {{/body.row}}
-      {{/each}}
-    {{/table.body}}
-  {{/dataset-table}}
+      <div class="browse-entities__entity">
+        {{#link-to entityRoute 'urn' (query-params urn=entity.uri)}}
+          <span class="browse-entities__title">
+            {{entity.nativeName}}
+          </span>
+        {{/link-to}}
+
+        <div>
+          {{#if entity.createdTime}}
+            <span class="browse-entities__entity__meta-head">
+              <strong>Created:</strong>
+            </span>
+
+            <span title="{{entity.createdTime}}">
+              {{moment-from-now entity.createdTime}}
+            </span>
+          {{/if}}
+
+          {{#if entity.modifiedTime}}
+            <span class="browse-entities__entity__meta-head">
+              <strong>Modified:</strong>
+            </span>
+
+            <span title="{{entity.modifiedTime}}">
+              {{moment-from-now entity.modifiedTime}}
+            </span>
+          {{/if}}
+
+          {{#if entity.removed}}
+            <span class="browse-entities__entity__meta-head">
+              <span class="removed-dataset removed-dataset--small">REMOVED</span>
+            </span>
+          {{/if}}
+
+          {{#if entity.deprecated}}
+            <span class="browse-entities__entity__meta-head">
+              <span class="deprecated-dataset deprecated-dataset--small">DEPRECATED</span>
+            </span>
+          {{/if}}
+        </div>
+      </div>
+
+    {{else}}
+
+      {{empty-state
+        heading="No entities found"
+        subHead="Could not find any datasets in our records"
+      }}
+
+    {{/each}}
+
+  {{/infinite-scroller}}
 {{/if}}

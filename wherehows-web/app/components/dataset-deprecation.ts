@@ -1,9 +1,9 @@
 import Component from '@ember/component';
-import { inject } from '@ember/service';
 import { getProperties, computed, set } from '@ember/object';
 import ComputedProperty, { oneWay } from '@ember/object/computed';
 import { baseCommentEditorOptions } from 'wherehows-web/constants';
-import Notifications, { NotificationEvent } from 'wherehows-web/services/notifications';
+import { action } from '@ember-decorators/object';
+import { IDatasetView } from 'wherehows-web/typings/api/datasets/dataset';
 
 export default class DatasetDeprecation extends Component {
   tagName = 'div';
@@ -11,10 +11,32 @@ export default class DatasetDeprecation extends Component {
   classNames = ['dataset-deprecation-toggle'];
 
   /**
-   * References the application notifications service
-   * @memberof DatasetDeprecation
+   * Currently selected date
+   * @type {Date}
+   * @memberof DatasetAclAccess
    */
-  notifications = <ComputedProperty<Notifications>>inject();
+  selectedDate: Date = new Date();
+
+  /**
+   * Date around which the calendar is centered
+   * @type {Date}
+   * @memberof DatasetAclAccess
+   */
+  centeredDate: Date = this.selectedDate;
+
+  /**
+   * Date the dataset should be decommissioned
+   * @type {IDatasetView.decommissionTime}
+   * @memberof DatasetAclAccess
+   */
+  decommissionTime: IDatasetView['decommissionTime'];
+
+  /**
+   * The earliest date a user can select as a decommission date
+   * @type {Date}
+   * @memberof DatasetAclAccess
+   */
+  minSelectableDecommissionDate: Date = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   /**
    * Flag indicating that the dataset is deprecated or otherwise
@@ -26,9 +48,9 @@ export default class DatasetDeprecation extends Component {
   /**
    * Working reference to the dataset's deprecated flag
    * @memberof DatasetDeprecation
-   * @type {ComputedProperty<typeof DatasetDeprecation.deprecated>}
+   * @type {ComputedProperty<DatasetDeprecation.deprecated>}
    */
-  deprecatedAlias = oneWay('deprecated');
+  deprecatedAlias: ComputedProperty<DatasetDeprecation['deprecated']> = oneWay('deprecated');
 
   /**
    * Note accompanying the deprecation flag change
@@ -40,9 +62,9 @@ export default class DatasetDeprecation extends Component {
   /**
    * Working reference to the dataset's deprecationNote
    * @memberof DatasetDeprecation
-   * @type {ComputedProperty<typeof DatasetDeprecation.deprecationNote>}
+   * @type {ComputedProperty<DatasetDeprecation.deprecationNote>}
    */
-  deprecationNoteAlias = oneWay('deprecationNote');
+  deprecationNoteAlias: ComputedProperty<DatasetDeprecation['deprecationNote']> = oneWay('deprecationNote');
 
   /**
    * Checks the working / aliased copies of the deprecation properties diverge from the
@@ -68,11 +90,15 @@ export default class DatasetDeprecation extends Component {
   );
 
   /**
-   * The action to be completed when a save is initiated
-   * @type {Function}
+   * The external action to be completed when a save is initiated
+   * @type {(isDeprecated: boolean, updateDeprecationNode: string, decommissionTime: Date | null) => Promise<void>}
    * @memberof DatasetDeprecation
    */
-  onUpdateDeprecation: Function;
+  onUpdateDeprecation: (
+    isDeprecated: boolean,
+    updateDeprecationNode: string,
+    decommissionTime: Date | null
+  ) => Promise<void> | void;
 
   editorOptions = {
     ...baseCommentEditorOptions,
@@ -81,42 +107,43 @@ export default class DatasetDeprecation extends Component {
     }
   };
 
-  actions = {
-    /**
-     * Toggles the boolean value of deprecatedAlias
-     */
-    toggleDeprecatedStatus(this: DatasetDeprecation) {
-      this.toggleProperty('deprecatedAlias');
-    },
+  /**
+   * Toggles the boolean value of deprecatedAlias
+   */
+  @action
+  toggleDeprecatedStatus(this: DatasetDeprecation) {
+    this.toggleProperty('deprecatedAlias');
+  }
 
-    /**
-     * Invokes the save action with the updated values for 
-     * deprecated and deprecationNote
-     */
-    async onSave(this: DatasetDeprecation) {
-      const { deprecatedAlias, deprecationNoteAlias, notifications: { notify } } = getProperties(this, [
-        'deprecatedAlias',
-        'deprecationNoteAlias',
-        'notifications'
-      ]);
-      const { onUpdateDeprecation } = this;
+  /**
+   * Handles updates to the decommissionTime attribute
+   * @param {Date} decommissionTime date dataset should be decommissioned
+   */
+  @action
+  onDecommissionDateChange(this: DatasetDeprecation, decommissionTime: Date) {
+    set(this, 'decommissionTime', new Date(decommissionTime).getTime());
+  }
 
-      if (onUpdateDeprecation) {
-        const noteValue = deprecatedAlias ? deprecationNoteAlias : '';
+  /**
+   * Invokes the save action with the updated values for
+   * deprecated decommissionTime, and deprecationNote
+   * @return {Promise<void>}
+   */
+  @action
+  async onSave(this: DatasetDeprecation) {
+    const { deprecatedAlias, deprecationNoteAlias, decommissionTime } = getProperties(this, [
+      'deprecatedAlias',
+      'deprecationNoteAlias',
+      'decommissionTime'
+    ]);
+    const { onUpdateDeprecation } = this;
 
-        try {
-          await onUpdateDeprecation(deprecatedAlias, noteValue);
-          set(this, 'deprecationNoteAlias', noteValue);
+    if (onUpdateDeprecation) {
+      const noteValue = deprecatedAlias ? deprecationNoteAlias : '';
+      const time = decommissionTime ? new Date(decommissionTime) : null;
 
-          notify(NotificationEvent.success, {
-            content: 'Successfully updated deprecation status'
-          });
-        } catch (e) {
-          notify(NotificationEvent.error, {
-            content: `An error occurred: ${e.message}`
-          });
-        }
-      }
+      await onUpdateDeprecation(!!deprecatedAlias, noteValue || '', time);
+      set(this, 'deprecationNoteAlias', noteValue);
     }
-  };
+  }
 }

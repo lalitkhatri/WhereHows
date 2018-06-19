@@ -2,7 +2,7 @@ import Router from '@ember/routing/router';
 import { get, getWithDefault } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { scheduleOnce } from '@ember/runloop';
-import config from './config/environment';
+import config from 'wherehows-web/config/environment';
 
 const AppRouter = Router.extend({
   location: config.locationType,
@@ -27,6 +27,9 @@ const AppRouter = Router.extend({
       const page = get(this, 'location').getURL();
       const title = getWithDefault(this, 'currentRouteName', 'unknown.page.title');
       const metrics = get(this, 'metrics');
+      // Reference to the _paq queue
+      //   check if we are in a browser env
+      const paq = window && window._paq ? window._paq : [];
 
       /**
        * Manually track Piwik siteSearch using the `trackSiteSearch` api
@@ -35,9 +38,6 @@ const AppRouter = Router.extend({
        * @link https://developer.piwik.org/guides/tracking-javascript-guide#internal-search-tracking
        */
       if (title.includes('search')) {
-        // Reference to the _paq queue
-        //   check if we are in a browser env
-        const paq = window && window._paq ? window._paq : [];
         const routerJs = get(this, 'router');
         const queryParams = routerJs ? get(routerJs, 'state.queryParams') : {};
         const { keyword, category = 'datasets', page = 1 } = queryParams;
@@ -48,6 +48,7 @@ const AppRouter = Router.extend({
       }
 
       metrics.trackPage({ page, title });
+      paq.push(['enableHeartBeatTimer']);
     });
   }
 });
@@ -70,6 +71,7 @@ AppRouter.map(function() {
         this.route('compliance');
         this.route('sample');
         this.route('relations');
+        this.route('access');
       }
     );
   });

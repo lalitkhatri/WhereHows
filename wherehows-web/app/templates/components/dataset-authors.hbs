@@ -1,109 +1,50 @@
-<section class="dataset-author-user-lookup">
-  <header>
-    <h2 class="dataset-author-user-lookup__header">
-      Add an Owner
-    </h2>
-  </header>
+{{#if (eq showOwnership "hide")}}
+  <section class="dataset-author-user-lookup">
+    <header>
+      <h2 class="dataset-author-user-lookup__header">
+        Add an Owner
+      </h2>
+    </header>
 
-  <div class="dataset-author-user-lookup__container">
-    {{user-lookup didFindUser=(action "addOwner")}}
-  </div>
-</section>
+    <div class="dataset-author-user-lookup__container">
+      {{user-lookup didFindUser=(action "addOwner")}}
+    </div>
+  </section>
+{{/if}}
 
-<p class="dataset-author__required-count">
-  {{#if requiredMinNotConfirmed}}
+{{#if (eq showOwnership "hide")}}
+  <p class="dataset-author__required-count">
+    {{#if requiredMinNotConfirmed}}
 
-    Add <strong>{{ownersRequiredCount}}</strong> owner(s) with ID Type - <code>USER</code>
-    , Ownership Type - <code>Data Owner</code>, and who is also <code>Active</code>
+      Add <strong>{{ownersRequiredCount}}</strong> owner(s) with ID Type - <code>USER</code>
+      , Ownership Type - <code>Data Owner</code>, and who is also <code>Active</code>
 
-  {{/if}}
-</p>
+    {{/if}}
+  </p>
+{{/if}}
 
-<section class="dataset-author">
-  <header>
-    <h2 class="dataset-author__header">
-      Owners Confirmed
-    </h2>
-
-    <p class="dataset-author__byline">
-      These are dataset ownership records that have been manually entered / confirmed by a human
-    </p>
-  </header>
-
-  {{#if confirmedOwners.length}}
-
-    <table class="nacho-table nacho-table--bordered dataset-owner-table">
-      <thead>
-      <tr>
-        <th class="dataset-author-column--wide">LDAP Username</th>
-        <th>Full Name</th>
-        <th class="dataset-author-column--narrow">ID Type</th>
-        <th>Last Modified</th>
-        <th>
-          Ownership Type
-
-          <!--TODO: DSS-6716-->
-          <!-- DRY out with wrapper component that takes the link as an attribute-->
-          <a
-            target="_blank"
-            href="https://iwww.corp.linkedin.com/wiki/cf/display/DWH/Metadata+Acquisition#ProjectOverview-ownership">
-            <sup>
-        <span class="glyphicon glyphicon-question-sign"
-              title="Link to more information"></span>
-            </sup>
-          </a>
-        </th>
-        <th>Remove Owner</th>
-      </tr>
-      </thead>
-
-      {{#each confirmedOwners as |confirmedOwner|}}
-
-        <tbody>
-        {{dataset-author
-          owner=confirmedOwner
-          ownerTypes=ownerTypes
-          removeOwner=(action "removeOwner")
-          confirmSuggestedOwner=(action "confirmSuggestedOwner")
-          updateOwnerType=(action "updateOwnerType")
-        }}
-        </tbody>
-      {{else}}
-      {{/each}}
-    </table>
-
-  {{else}}
-
-    {{empty-state
-      heading="No Confirmed Owners"
-      subHead="Search for users above to add to the list of owners"
-    }}
-
-  {{/if}}
-</section>
-
-{{#if systemGeneratedOwners}}
+{{#if (eq showOwnership "show")}}
 
   <section class="dataset-author">
     <header>
       <h2 class="dataset-author__header">
-        System Suggested Owners
+        Owners
       </h2>
 
       <p class="dataset-author__byline">
-        These are dataset ownership records, suggested based on information derived from the source metadata.
+        Please add at least <strong>2</strong> owners.
       </p>
     </header>
 
     <table class="nacho-table nacho-table--bordered dataset-owner-table">
       <thead>
       <tr>
-        <th class="dataset-author-column--wide">LDAP Username</th>
-        <th>Full Name</th>
+        <th class="dataset-author-column--extra-wide">
+          LDAP Username
+        </th>
+        <th class="dataset-author-column--extra-wide">Full Name</th>
         <th class="dataset-author-column--narrow">ID Type</th>
-        <th>Source</th>
-        <th>Last Modified</th>
-        <th>
+        <th class="dataset-author-column--wide">
           Ownership Type
 
           <!--TODO: DSS-6716-->
@@ -117,31 +58,164 @@
             </sup>
           </a>
         </th>
-        <th class="dataset-owner-table--wrap">Add Suggested Owner</th>
+        <th></th>
       </tr>
       </thead>
 
-      <tbody>
-      {{#each systemGeneratedOwners as |systemGeneratedOwner|}}
+      {{#each confirmedOwners as |confirmedOwner|}}
+        <tbody>
         {{dataset-author
-          owner=systemGeneratedOwner
+          owner=confirmedOwner
           ownerTypes=ownerTypes
-          commonOwners=commonOwners
+          showOwnership=showOwnership
           removeOwner=(action "removeOwner")
           confirmSuggestedOwner=(action "confirmSuggestedOwner")
           updateOwnerType=(action "updateOwnerType")
         }}
+        </tbody>
       {{/each}}
-      </tbody>
 
+      <tbody>
+        <tr>
+          <div class="dataset-owner-table__add-owner">
+            {{#if isAddingOwner}}
+              {{pwr-user-lookup didFindUser=(action "addOwner")}}
+            {{else}}
+              <span class="dataset-owner-table__trigger" {{action (mut isAddingOwner) true}}>
+                {{fa-icon "plus"}} Add an owner
+              </span>
+            {{/if}}
+          </div>
+        </tr>
+      </tbody>
     </table>
+  </section>
+
+{{else}}
+
+  <section class="dataset-author">
+    <header>
+      <h2 class="dataset-author__header">
+        Owners Confirmed
+      </h2>
+
+      <p class="dataset-author__byline">
+        These are dataset ownership records that have been manually entered / confirmed by a human
+      </p>
+    </header>
+
+    {{#if confirmedOwners.length}}
+
+    <table class="nacho-table nacho-table--bordered dataset-owner-table">
+      <thead>
+        <tr>
+          <th class="dataset-author-column--wide">LDAP Username</th>
+          <th>Full Name</th>
+          <th class="dataset-author-column--narrow">ID Type</th>
+          <th>Last Modified</th>
+          <th>
+            Ownership Type
+
+            <!--TODO: DSS-6716-->
+            <!-- DRY out with wrapper component that takes the link as an attribute-->
+            <a target="_blank" href="https://iwww.corp.linkedin.com/wiki/cf/display/DWH/Metadata+Acquisition#ProjectOverview-ownership">
+              <sup>
+                <span class="glyphicon glyphicon-question-sign" title="Link to more information"></span>
+              </sup>
+            </a>
+          </th>
+          <th>Remove Owner</th>
+        </tr>
+      </thead>
+
+      {{#each confirmedOwners as |confirmedOwner|}}
+
+      <tbody>
+        {{dataset-author owner=confirmedOwner ownerTypes=ownerTypes removeOwner=(action "removeOwner") confirmSuggestedOwner=(action
+        "confirmSuggestedOwner") updateOwnerType=(action "updateOwnerType") }}
+      </tbody>
+      {{else}} {{/each}}
+    </table>
+
+    {{else}} {{empty-state heading="No Confirmed Owners" subHead="Search for users above to add to the list of owners" }} {{/if}}
   </section>
 
 {{/if}}
 
+{{#if (eq showOwnership "show")}}
+  <section class="dataset-author">
+    {{datasets/owners/suggested-owners
+      owners=systemGeneratedOwners
+      ownerTypes=ownerTypes
+      commonOwners=commonOwners
+      removeOwner=(action "removeOwner")
+      confirmSuggestedOwner=(action  "confirmSuggestedOwner")
+      updateOwnerType=(action "updateOwnerType")}}
+  </section>
+{{/if}}
+
+{{#if systemGeneratedOwners}}
+
+  {{#unless (eq showOwnership "show")}}
+
+    <section class="dataset-author">
+      <header>
+        <h2 class="dataset-author__header">
+          System Suggested Owners
+        </h2>
+
+        <p class="dataset-author__byline">
+          These are dataset ownership records, suggested based on information derived from the source metadata.
+        </p>
+      </header>
+
+      <table class="nacho-table nacho-table--bordered dataset-owner-table">
+        <thead>
+        <tr>
+          <th class="dataset-author-column--wide">LDAP Username</th>
+          <th>Full Name</th>
+          <th class="dataset-author-column--narrow">ID Type</th>
+          <th>Source</th>
+          <th>Last Modified</th>
+          <th>
+            Ownership Type
+
+            <!--TODO: DSS-6716-->
+            <!-- DRY out with wrapper component that takes the link as an attribute-->
+            <a
+              target="_blank"
+              href="https://iwww.corp.linkedin.com/wiki/cf/display/DWH/Metadata+Acquisition#ProjectOverview-ownership">
+              <sup>
+          <span class="glyphicon glyphicon-question-sign"
+                title="Link to more information"></span>
+              </sup>
+            </a>
+          </th>
+          <th class="dataset-owner-table--wrap">Add Suggested Owner</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        {{#each systemGeneratedOwners as |systemGeneratedOwner|}}
+          {{dataset-author
+            owner=systemGeneratedOwner
+            ownerTypes=ownerTypes
+            commonOwners=commonOwners
+            removeOwner=(action "removeOwner")
+            confirmSuggestedOwner=(action "confirmSuggestedOwner")
+            updateOwnerType=(action "updateOwnerType")
+          }}
+        {{/each}}
+        </tbody>
+
+      </table>
+    </section>
+
+  {{/unless}}
+{{/if}}
+
 <section class="action-bar">
   <div class="container action-bar__content">
-
     <button
       class="nacho-button nacho-button--large-inverse action-bar__item dataset-authors-save"
       disabled={{requiredMinNotConfirmed}}
@@ -155,5 +229,21 @@
 
     </button>
 
+    {{#if requiredMinNotConfirmed}}
+      <div class="dataset-authors-save-error">
+        <p>
+          {{fa-icon "times-circle-o" class="dataset-authors-save-error__icon"}}
+          {{#unless (eq changedState 1)}}
+            Please make changes to save.
+          {{else}}
+            {{#if (eq ownersRequiredCount 2)}}
+              Add at least 2 DataOwners.
+            {{else}}
+              Add at least {{ownersRequiredCount}} more DataOwner(s).
+            {{/if}}
+          {{/unless}}
+        </p>
+      </div>
+    {{/if}}
   </div>
 </section>

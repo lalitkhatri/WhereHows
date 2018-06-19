@@ -29,21 +29,18 @@
     }
 
     &--inactive {
-      background-color: set-color(red, maroonflush);
+      background-color: set-color(red, red5);
       pointer-events: none;
+      margin-left: 8px;
     }
   }
 }
 
 .dataset-author-user-lookup {
-  border: 1px solid set-color(grey, light);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075);
-  padding: item-spacing(4);
-  margin: item-spacing(3 0);
+  @include nacho-container;
   display: flex;
   flex-direction: row;
   align-items: center;
-  border-radius: 2px;
 
   &__header {
     display: flex;
@@ -55,5 +52,20 @@
   &__container {
     width: 300px;
     margin-left: item-spacing(4);
+  }
+}
+
+.dataset-authors-save {
+  float: right;
+}
+
+.dataset-authors-save-error {
+  float: right;
+  padding-top: 10px;
+  margin-right: 64px;
+
+  &__icon {
+    color: get-color(red5);
+    margin-right: 8px;
   }
 }

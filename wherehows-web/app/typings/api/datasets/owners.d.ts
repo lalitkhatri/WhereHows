@@ -24,17 +24,19 @@ interface IOwner {
  * Describes the expected shape of the response for dataset owners endpoint
  */
 interface IOwnerResponse {
-  status: ApiStatus;
   owners?: Array<IOwner>;
-  msg?: string;
+  fromUpstream: boolean;
+  datasetUrn: string;
 }
 
 /**
- * Describes the interface on a response to a POST on the owner endpoint
+ * Describes the properties on a response to a request for owner types
+ * @interface
  */
-interface IOwnerPostResponse {
+interface IOwnerTypeResponse {
   status: ApiStatus;
+  ownerTypes?: Array<OwnerType>;
   msg?: string;
 }
 
-export { IOwnerPostResponse, IOwnerResponse, IOwner };
+export { IOwnerResponse, IOwner, IOwnerTypeResponse };

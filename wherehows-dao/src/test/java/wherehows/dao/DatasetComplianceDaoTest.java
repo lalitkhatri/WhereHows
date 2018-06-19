@@ -55,7 +55,7 @@ public class DatasetComplianceDaoTest {
         + "enterpriseProduct: false, accountStatus: false, addressBookImports: false, microsoftData: false, "
         + "subsidiaryData: false, otherThirdPartyIntegrations: false, device: false, searchHistory: false, "
         + "courseViewingHistory: false, whoViewedMyProfile: false, profileViewsByMe: false, advertising: false, "
-        + "usageOrErrorOrConnectivity: false, otherClickstreamOrBrowsingData: false}";
+        + "usageOrErrorOrConnectivity: false, otherClickstreamOrBrowsingData: false, employeeData: null}";
 
     assertEquals(dsCompliance.getCompliancePurgeType(), purgeType.toString());
     assertEquals(dsCompliance.getCompliancePurgeNote(), purgeNote);
@@ -78,7 +78,7 @@ public class DatasetComplianceDaoTest {
     policy.datasetConfidentiality = SecurityClassification.HIGHLY_CONFIDENTIAL;
 
     String complianceEntityStr = "[{fieldPath: field1, complianceDataType: ADDRESS, complianceDataTypeUrn: null, "
-        + "fieldFormat: null, securityClassification: CONFIDENTIAL}]";
+        + "fieldFormat: null, securityClassification: CONFIDENTIAL, valuePattern: null}]";
 
     complianceDao.fillDsComplianceByCompliancePolicy(dsCompliance, policy, datasetUrn2, actor2);
 

@@ -1,7 +1,21 @@
 declare module 'ember-concurrency' {
-  export function timeout(delay: number): Promise<void>;
   import ComputedProperty from '@ember/object/computed';
   import RSVP from 'rsvp';
+
+  type ComputedProperties<T> = { [K in keyof T]: ComputedProperty<T[K]> | T[K] };
+
+  export function timeout(delay: number): Promise<void>;
+
+  export function waitForProperty<T, K extends keyof T>(
+    object: ComputedProperties<T>,
+    key: K,
+    predicateCallback: (arg: T[K]) => boolean | T[K]
+  ): IterableIterator<T[K]>;
+  export function waitForProperty<T, K extends keyof T>(
+    object: T,
+    key: K,
+    predicateCallback: (arg: T[K]) => boolean | T[K]
+  ): IterableIterator<T[K]>;
 
   export enum TaskInstanceState {
     Dropped = 'dropped',
@@ -12,14 +26,14 @@ declare module 'ember-concurrency' {
   }
 
   export interface TaskProperty<T> extends ComputedProperty<T> {
-    cancelOn(eventNames: string[]): this;
+    cancelOn(eventNames: string): this;
     debug(): this;
     drop(): this;
     enqueue(): this;
     group(groupPath: string): this;
     keepLatest(): this;
     maxConcurrency(n: number): this;
-    on(eventNames: string[]): this;
+    on(eventNames: string): this;
     restartable(): this;
   }
 
@@ -50,7 +64,7 @@ declare module 'ember-concurrency' {
   }
 
   type Task<T, P> = TaskProperty<T> & {
-    perform: ComputedProperty<P>;
+    perform: P;
     readonly isIdle: boolean;
     readonly isQueued: boolean;
     readonly isRunning: boolean;

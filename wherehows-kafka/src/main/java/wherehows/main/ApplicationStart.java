@@ -23,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import javax.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.hikaricp.internal.HikariCPConnectionProvider;
 import wherehows.actors.KafkaClientMaster;
 import wherehows.common.utils.ProcessUtil;
 import wherehows.dao.ConnectionPoolProperties;
@@ -45,7 +44,6 @@ public class ApplicationStart {
       config.hasPath("dao.factory.class") ? config.getString("dao.factory.class") : DaoFactory.class.getCanonicalName();
 
   private static final EntityManagerFactory ENTITY_MANAGER_FACTORY = ConnectionPoolProperties.builder()
-      .providerClass(HikariCPConnectionProvider.class.getName())
       .dataSourceClassName(WHZ_DB_DSCLASSNAME)
       .dataSourceURL(DB_WHEREHOWS_URL)
       .dataSourceUser(DB_WHEREHOWS_USERNAME)

@@ -13,15 +13,37 @@
  */
 package wherehows.utils;
 
+import com.linkedin.events.metadata.ChangeAuditStamp;
+import com.linkedin.events.metadata.ChangeType;
+import com.linkedin.events.metadata.DatasetIdentifier;
+import com.linkedin.events.metadata.DeploymentDetail;
+import com.linkedin.events.metadata.MetadataChangeEvent;
+import com.typesafe.config.Config;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.StringUtils;
 
 
 public class ProcessorUtil {
 
   private ProcessorUtil() {
+  }
+
+  /**
+   * Remove duplicate datasets in the list
+   * @param datasets List of DatasetIdentifier
+   * @return de-duped list
+   */
+  @Nonnull
+  public static List<DatasetIdentifier> dedupeDatasets(@Nonnull List<DatasetIdentifier> datasets) {
+    return datasets.stream().distinct().collect(Collectors.toList());
   }
 
   /**
@@ -38,5 +60,40 @@ public class ProcessorUtil {
     return existing.stream()
         .filter(s -> exclusions.stream().noneMatch(p -> p.matcher(s).find()))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Extract whitelisted actors from the given config and configPath
+   * @param config The {@link Config}
+   * @param configPath Key for the white list config
+   * @return A set of actor names or null if corresponding config doesn't exists
+   */
+  @Nullable
+  public static Set<String> getWhitelistedActors(@Nonnull Config config, @Nonnull String configPath) {
+    String actors = config.hasPath(configPath) ? config.getString(configPath) : null;
+    if (StringUtils.isEmpty(actors)) {
+      return null;
+    }
+
+    return new HashSet<>(Arrays.asList(actors.split(";")));
+  }
+
+  /**
+   * Create MCE to DELETE the dataset
+   */
+  public static MetadataChangeEvent mceDelete(@Nonnull DatasetIdentifier dataset, @Nonnull DeploymentDetail deployment,
+      String actor) {
+    MetadataChangeEvent mce = new MetadataChangeEvent();
+    mce.datasetIdentifier = dataset;
+
+    ChangeAuditStamp auditStamp = new ChangeAuditStamp();
+    auditStamp.actorUrn = actor;
+    auditStamp.time = System.currentTimeMillis();
+    auditStamp.type = ChangeType.DELETE;
+    mce.changeAuditStamp = auditStamp;
+
+    mce.deploymentInfo = Collections.singletonList(deployment);
+
+    return mce;
   }
 }

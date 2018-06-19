@@ -45,8 +45,7 @@ public class DictDatasetDao extends BaseDao {
   private static final String SET_DATASET_DEPRECATION =
       "UPDATE DictDataset SET isDeprecated = :deprecated WHERE id = :datasetId";
 
-  private static final String SET_DATASET_ACTIVE =
-      "UPDATE DictDataset SET isActive = :active WHERE urn = :datasetUrn";
+  private static final String SET_DATASET_ACTIVE = "UPDATE DictDataset SET isActive = :active WHERE urn = :datasetUrn";
 
   public DictDataset findByUrn(@Nonnull String urn) {
     return findBy(DictDataset.class, "urn", urn);
@@ -192,6 +191,11 @@ public class DictDatasetDao extends BaseDao {
     executeUpdate(SET_DATASET_DEPRECATION, params);
   }
 
+  public void setDatasetDeprecation(@Nonnull String datasetUrn, boolean isDeprecated, @Nonnull String deprecationNote,
+      @Nullable Long decommissionTime, @Nonnull String user) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
   /**
    * Set active/removed status of a dataset.
    * @param identifier DatasetIdentifier
@@ -200,7 +204,7 @@ public class DictDatasetDao extends BaseDao {
    * @throws Exception
    */
   public void setDatasetRemoved(@Nonnull DatasetIdentifier identifier, boolean isRemoved,
-      @Nonnull ChangeAuditStamp auditStamp) throws Exception {
+      @Nullable List<DeploymentDetail> deployments, @Nonnull ChangeAuditStamp auditStamp) throws Exception {
 
     String urn = toWhDatasetUrn(identifier);
 

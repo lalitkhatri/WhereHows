@@ -15,7 +15,7 @@ package wherehows.processors;
 
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import wherehows.dao.DaoFactory;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 
 /**
@@ -23,16 +23,13 @@ import wherehows.dao.DaoFactory;
  */
 public abstract class KafkaMessageProcessor {
 
-  protected final DaoFactory DAO_FACTORY;
+  private final String _producerTopic;
 
-  protected final String _producerTopic;
+  private final KafkaProducer<String, IndexedRecord> _producer;
 
-  protected final KafkaProducer<String, IndexedRecord> PRODUCER;
-
-  public KafkaMessageProcessor(DaoFactory daoFactory, String producerTopic, KafkaProducer<String, IndexedRecord> producer) {
-    this.DAO_FACTORY = daoFactory;
+  KafkaMessageProcessor(String producerTopic, KafkaProducer<String, IndexedRecord> producer) {
     this._producerTopic = producerTopic;
-    this.PRODUCER = producer;
+    this._producer = producer;
   }
 
   /**
@@ -41,4 +38,7 @@ public abstract class KafkaMessageProcessor {
    */
   public abstract void process(IndexedRecord indexedRecord);
 
+  void sendMessage(IndexedRecord message) {
+    this._producer.send(new ProducerRecord(_producerTopic, message));
+  }
 }

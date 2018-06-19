@@ -31,6 +31,7 @@ import wherehows.models.table.DictDataset;
 import wherehows.models.table.DsCompliance;
 import wherehows.models.view.DatasetCompliance;
 import wherehows.models.view.DatasetFieldEntity;
+import wherehows.models.view.DatasetRetention;
 import wherehows.models.view.DsComplianceSuggestion;
 
 import static wherehows.util.JsonUtil.*;
@@ -57,11 +58,20 @@ public class DatasetComplianceDao extends BaseDao {
     return dsComplianceToDatasetCompliance(findComplianceById(datasetId));
   }
 
+  @Nonnull
+  public DatasetCompliance getDatasetComplianceByUrn(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet, use getDatasetComplianceByDatasetId");
+  }
+
   public void updateDatasetCompliance(@Nonnull DatasetCompliance record, @Nonnull String user) throws Exception {
     DsCompliance compliance = datasetComplianceToDsCompliance(record);
     compliance.setModifiedBy(user);
 
     update(compliance);
+  }
+
+  public void updateDatasetComplianceByUrn(@Nonnull DatasetCompliance record, @Nonnull String user) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet, use updateDatasetCompliance");
   }
 
   /**
@@ -131,6 +141,11 @@ public class DatasetComplianceDao extends BaseDao {
     throw new UnsupportedOperationException("Compliance Suggestion not implemented.");
   }
 
+  @Nullable
+  public DsComplianceSuggestion getComplianceSuggestion(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Compliance Suggestion not implemented.");
+  }
+
   /**
    * Insert / update dataset suggested compliance data from MetadataChangeEvent
    * @param identifier DatasetIdentifier
@@ -143,6 +158,20 @@ public class DatasetComplianceDao extends BaseDao {
       @Nonnull ChangeAuditStamp auditStamp, @Nonnull SuggestedCompliancePolicy suggestion) throws Exception {
     // TODO: write suggested compliance information to DB
     throw new UnsupportedOperationException("Compliance Suggestion not implemented.");
+  }
+
+  public void sendSuggestedComplianceFeedback(@Nonnull String datasetUrn, @Nonnull String uid, @Nonnull String feedback)
+      throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  @Nullable
+  public DatasetRetention getDatasetRetention(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  public void updateDatasetRetention(@Nonnull DatasetRetention record, @Nonnull String user) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 
   /**

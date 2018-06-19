@@ -74,6 +74,11 @@ public class DatasetViewDao extends BaseViewDao {
     return fillDatasetViewFromDictDataset(_dictDatasetDao.findById(datasetId));
   }
 
+  @Nonnull
+  public DatasetView getDatasetView(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
   /**
    * Convert DictDataset to DatasetView
    * @param ds DictDataset
@@ -96,17 +101,22 @@ public class DatasetViewDao extends BaseViewDao {
     return view;
   }
 
+  @Nonnull
   public PagedCollection<DatasetView> listDatasets(@Nullable String platform, @Nullable String origin,
       @Nonnull String prefix, int start, int count) throws Exception {
-    throw new RuntimeException("Not implemented yet");
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 
-  public List<String> listSegments(@Nonnull String platform, @Nullable String origin, @Nonnull String prefix) throws Exception {
-    throw new RuntimeException("Not implemented yet");
+  @Nonnull
+  public List<String> listSegments(@Nonnull String platform, @Nullable String origin, @Nonnull String prefix)
+      throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 
-  public List<String> listFullNames(@Nonnull String platform, @Nullable String origin, @Nonnull String prefix) throws Exception {
-    throw new RuntimeException("Not implemented yet");
+  @Nonnull
+  public List<String> listFullNames(@Nonnull String platform, @Nullable String origin, @Nonnull String cluster,
+      @Nonnull String prefix) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 
   /**
@@ -127,6 +137,14 @@ public class DatasetViewDao extends BaseViewDao {
     schema.setColumns(columns);
 
     return schema;
+  }
+
+  /**
+   * Get dataset schema by dataset urn
+   */
+  @Nullable
+  public DatasetSchema getDatasetSchema(@Nonnull String datasetUrn) throws Exception {
+    throw new UnsupportedOperationException("Not implemented yet");
   }
 
   /**

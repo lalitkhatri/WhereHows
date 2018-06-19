@@ -3,7 +3,7 @@ import { inject } from '@ember/service';
 import ComputedProperty, { filter } from '@ember/object/computed';
 import { set, get, computed, getProperties } from '@ember/object';
 import { assert } from '@ember/debug';
-import { task, Task } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 
 import UserLookup from 'wherehows-web/services/user-lookup';
 import CurrentUser from 'wherehows-web/services/current-user';
@@ -14,10 +14,14 @@ import {
   updateOwner,
   minRequiredConfirmedOwners,
   validConfirmedOwners,
-  isRequiredMinOwnersNotConfirmed
+  isRequiredMinOwnersNotConfirmed,
+  isConfirmedOwner,
+  isSystemGeneratedOwner
 } from 'wherehows-web/constants/datasets/owner';
-import { OwnerIdType, OwnerSource, OwnerType } from 'wherehows-web/utils/api/datasets/owners';
+import { OwnerSource, OwnerType } from 'wherehows-web/utils/api/datasets/owners';
 import Notifications, { NotificationEvent } from 'wherehows-web/services/notifications';
+
+type Comparator = -1 | 0 | 1;
 
 /**
  * Defines properties for the component that renders a list of owners and provides functionality for
@@ -42,6 +46,13 @@ export default class DatasetAuthors extends Component {
   owners: Array<IOwner>;
 
   /**
+   * The list of suggested owners, used to populate the suggestions window below the owners table
+   * @type {Array<IOwner>}
+   * @memberof DatasetAuthors
+   */
+  suggestedOwners: Array<IOwner>;
+
+  /**
    * Current user service
    * @type {ComputedProperty<CurrentUser>}
    * @memberof DatasetAuthors
@@ -63,6 +74,20 @@ export default class DatasetAuthors extends Component {
   userLookup: ComputedProperty<UserLookup> = inject();
 
   /**
+   * If there are no changes to the ownership tab, we want to keep the save button disabled. Rather than
+   * try to compare two sets of prev vs new data, we just have a flag here that short stops the validation
+   * function.
+   * Note: changedState has 3 states:
+   * -1   Component hasn't completed initialization yet, and no changes have been made. When
+   *      requiredMinNotConfirmed is run on init/render, this gets incremented to its neutral state at 0
+   * 0    No changes have been made yet
+   * 1    At least one change has been made
+   * @type {number}
+   * @memberof DatasetAuthors
+   */
+  changedState: Comparator = -1;
+
+  /**
    * Reference to the userNamesResolver function to asynchronously match userNames
    * @type {UserLookup.userNamesResolver}
    * @memberof DatasetAuthors
@@ -71,20 +96,27 @@ export default class DatasetAuthors extends Component {
 
   /**
    * A list of valid owner type strings returned from the remote api endpoint
-   * @type {Array<string>}
+   * @type {Array<OwnerType>}
    * @memberof DatasetAuthors
    */
-  ownerTypes: Array<string>;
+  ownerTypes: Array<OwnerType>;
 
   /**
    * Flag that resolves in the affirmative if the number of confirmed owner is less the minimum required
    * @type {ComputedProperty<boolean>}
    * @memberof DatasetAuthors
    */
-  requiredMinNotConfirmed: ComputedProperty<boolean> = computed('confirmedOwners.length', function(
+  requiredMinNotConfirmed: ComputedProperty<boolean> = computed('confirmedOwners.@each.type', function(
     this: DatasetAuthors
   ) {
-    return isRequiredMinOwnersNotConfirmed(get(this, 'confirmedOwners'));
+    const changedState = get(this, 'changedState');
+
+    if (changedState < 1) {
+      set(this, 'changedState', <Comparator>(changedState + 1));
+    }
+    // If there have been no changes, then we want to automatically set true in order to disable save button
+    // when no changes have been made
+    return changedState === -1 ? true : isRequiredMinOwnersNotConfirmed(get(this, 'confirmedOwners'));
   });
 
   /**
@@ -92,7 +124,9 @@ export default class DatasetAuthors extends Component {
    * @type {ComputedProperty<number>}
    * @memberof DatasetAuthors
    */
-  ownersRequiredCount: ComputedProperty<number> = computed('confirmedOwners.[]', function(this: DatasetAuthors) {
+  ownersRequiredCount: ComputedProperty<number> = computed('confirmedOwners.@each.type', function(
+    this: DatasetAuthors
+  ) {
     return minRequiredConfirmedOwners - validConfirmedOwners(get(this, 'confirmedOwners')).length;
   });
 
@@ -101,7 +135,17 @@ export default class DatasetAuthors extends Component {
    * @type {ComputedProperty<Array<IOwner>>}
    * @memberof DatasetAuthors
    */
-  confirmedOwners: ComputedProperty<Array<IOwner>> = filter('owners', ({ source }) => source === OwnerSource.Ui);
+  confirmedOwners: ComputedProperty<Array<IOwner>> = filter('owners', isConfirmedOwner);
+
+  /**
+   * Boolean that determines whether the user is currently using the typeahead box to add an
+   * owner. This is triggered to true when the user clicks on Add an Owner in the table and
+   * returns to false at the end of the addOwner action
+   * @type {boolean}
+   * @default false
+   * @memberof DatasetAuthors
+   */
+  isAddingOwner = false;
 
   /**
    * Intersection of confirmed owners and suggested owners
@@ -129,8 +173,13 @@ export default class DatasetAuthors extends Component {
    * @type {ComputedProperty<Array<IOwner>>}
    * @memberof DatasetAuthors
    */
-  systemGeneratedOwners: ComputedProperty<Array<IOwner>> = filter('owners', function({ source, idType }: IOwner) {
-    return source !== OwnerSource.Ui && idType === OwnerIdType.User;
+  systemGeneratedOwners: ComputedProperty<Array<IOwner>> = computed('suggestedOwners', function() {
+    const showOwnership = get(this, 'showOwnership');
+    // Creates a copy of suggested owners since using it directly seems to invoke a "modified twice in the
+    // same render" error
+    return showOwnership === 'show'
+      ? (get(this, 'suggestedOwners') || []).slice(0)
+      : get(this, 'owners').filter(isSystemGeneratedOwner);
   });
 
   /**
@@ -138,9 +187,7 @@ export default class DatasetAuthors extends Component {
    * @type {Task<Promise<Array<IOwner>>, void>}
    * @memberof DatasetAuthors
    */
-  saveOwners: Task<Promise<Array<IOwner>>, void> = task(function*(
-    this: DatasetAuthors
-  ): IterableIterator<Promise<Array<IOwner>>> {
+  saveOwners = task(function*(this: DatasetAuthors): IterableIterator<Promise<Array<IOwner>>> {
     yield get(this, 'save')(get(this, 'owners'));
   }).drop();
 
@@ -172,7 +219,7 @@ export default class DatasetAuthors extends Component {
       }
 
       const { userName } = get(get(this, 'currentUser'), 'currentUser');
-      const updatedOwners = [newOwner, ...owners];
+      const updatedOwners = [...owners, newOwner];
       confirmOwner(newOwner, userName);
 
       return owners.setObjects(updatedOwners);
